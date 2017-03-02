@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"os"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -91,6 +92,29 @@ func Debug(name string) DebugFunction {
 
 		d := deltas(prevGlobal, prev, color)
 		fmt.Fprintf(writer, d+" \033["+color+"m"+name+"\033[0m - "+format+"\n", args...)
+		prevGlobal = time.Now()
+		prev = time.Now()
+	}
+}
+
+// WithLine creates a debug function for `name` which you call
+// with printf-style arguments in your application or library.
+func WithLine(name string) DebugFunction {
+	prevGlobal := time.Now()
+	color := colors[rand.Intn(len(colors))]
+	prev := time.Now()
+
+	return func(format string, args ...interface{}) {
+		if !enabled {
+			return
+		}
+
+		if !reg.MatchString(name) {
+			return
+		}
+		_, file, line, _ := runtime.Caller(1)
+		d := deltas(prevGlobal, prev, color)
+		fmt.Fprintf(writer, d+" \033["+color+"m"+name+"\033[0m - "+fmt.Sprintf("%s(%d) - ", file, line)+format+"\n", args...)
 		prevGlobal = time.Now()
 		prev = time.Now()
 	}
